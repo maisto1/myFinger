@@ -25,7 +25,7 @@ Clone the repository and compile the source using `gcc`:
 git clone https://github.com/your-username/finger-clone.git
 cd finger-clone
 gcc -o finger main.c
-
+```
 ---
 
 ## About the Original `finger` Command
