@@ -1,57 +1,138 @@
-# Finger-Like User Info Tool
+# Finger Command Implementation
+
+A custom implementation of the Unix `finger` command.
 
 ## Overview
 
-This is a lightweight C program that mimics the basic behavior of the Unix `finger` command. It displays information about local system users, such as login status, last login time, and optional `.plan`, `.project`, or `.forward` files if present.
-
-**Note:** This tool only supports **local user information** — no remote user lookups.
-
----
+This project implements a program that behaves like the Unix `finger` command, which displays information about system users. This implementation focuses on local user lookups only and does not use the `exec*` family of functions.
 
 ## Features
 
-- Lists currently logged-in users  
-- Displays info about a specific user  
-- Reads optional files in the user's home directory (`.plan`, `.project`, `.forward`)  
-- Simple, portable C code with no external dependencies  
+- Display information about system users in both short and long formats
+- Support for querying specific users or all currently logged-in users
+- Options to control the display format and content
+- Processing of user configuration files like `.plan`, `.project`, and `.pgpkey`
+- Respect for user privacy settings
 
----
+## Command Syntax
 
-## Installation
-
-Clone the repository and compile the source using `gcc`:
-
-```bash
-git clone https://github.com/your-username/finger-clone.git
-cd finger-clone
-gcc -o finger main.c
 ```
----
+finger [-lmsp] [user ...] 
+```
 
-## About the Original `finger` Command
+## Options
 
-The original `finger` command displays information about system users. It supports several options to control the output format:
+- `-s`: Short format display (default when no users are specified)
+  - Shows login name, real name, terminal name, write status, idle time, login time, office location, and office phone number
+  
+- `-l`: Long format display (default when users are specified)
+  - Includes all information from short format
+  - Adds home directory, home phone number, login shell, mail status
+  - Displays contents of `.plan`, `.project`, `.pgpkey`, and `.forward` files
+  
+- `-p`: Prevents displaying the contents of `.plan`, `.project`, and `.pgpkey` files in long format
 
-- `-s`  
-  Shows a short summary: login name, real name, terminal, write status (`*` if write is off), idle time, login time, office location, and phone number. If the login time is over six months old, it shows the year instead of the time.
+- `-m`: Prevents matching on users' real names (matches only on login names)
 
-- `-l`  
-  Produces a detailed, multi-line format including all `-s` fields plus the user's home directory, shell, mail status, and the contents of `.plan`, `.project`, `.pgpkey`, and `.forward`. Also shows formatted phone numbers and message status.
+## Implementation Details
 
-- `-p`  
-  Prevents `finger` from displaying the contents of `.plan`, `.project`, and `.pgpkey` files.
+The code is organized into:
+- Header file(s) containing declarations of variables, constants, and function prototypes
+- C source file(s) containing the implementation of all functions
 
-- `-m`  
-  Disables matching of real names — only matches login names (case-insensitive).
+### Key Components
 
-If no options are provided:
-- If usernames are given → defaults to `-l` output.
-- If no usernames are given → defaults to `-s` and shows all users currently logged in.
+1. **User Information Retrieval**:
+   - Gathering login data from system files
+   - Reading user-specific configuration files
+   - Determining login status and idle times
 
-`finger` can also query remote users via `user@host` or just `@host`.
+2. **Display Formatting**:
+   - Phone number formatting based on digit count
+   - Time display logic (showing year for old logins)
+   - Mail status determination and display
 
-Files used by `finger`:
-- `~/.plan`, `~/.project`, `~/.pgpkey`: Shown in long-format output.
-- `~/.nofinger`: Hides the user from remote `finger` queries for privacy.
+3. **Privacy Management**:
+   - Checking for `.nofinger` files
+   - Handling write permission status
 
-More info: [finger(1) - Linux Man Page](https://linux.die.net/man/1/finger)
+## Output Format Examples
+
+### Short Format (`-s`)
+
+```
+Login     Name            Tty    Idle  Login Time   Office     Phone
+jsmith    John Smith      tty1     2d  Apr 15 14:30 Room 123   +1-555-123-4567
+```
+
+### Long Format (`-l`)
+
+```
+Login: jsmith                           Name: John Smith
+Directory: /home/jsmith                 Shell: /bin/bash
+Office: Room 123, 555-123-4567          Home Phone: 555-765-4321
+Last login Fri Apr 15 14:30 on tty1
+Mail last read Wed Apr 13 09:15 2022
+No Plan.
+```
+
+## Special Cases
+
+- Nonexistent idle and login times are displayed as `*`
+- Write permission denial shown as `*` after terminal name in short format
+- Write permission denial shown as `(messages off)` in long format
+- Phone numbers formatted according to digit count:
+  - 11 digits: `+N-NNN-NNN-NNNN`
+  - 10 digits: `NNN-NNN-NNNN`
+  - 7 digits: `NNN-NNNN`
+  - 5 digits: `xN-NNNN`
+  - 4 digits: `xNNNN`
+
+## Files Used
+
+- `~/.nofinger`: Indicates user privacy preference
+- `~/.plan`: Free-form text displayed in long format
+- `~/.project`: Single line of text displayed in long format
+- `~/.pgpkey`: PGP key information displayed in long format
+- `~/.forward`: Mail forwarding information displayed in long format
+
+## Limitations
+
+- This implementation does not support remote user lookup (`user@host` syntax)
+- The `exec*` family of functions is not used as per requirements
+
+## Building and Running
+
+Compile with:
+
+```
+gcc -o finger finger.c -Wall
+```
+
+Run with:
+
+```
+./finger [-lmsp] [user ...]
+```
+
+## Examples
+
+1. Show information for all logged-in users in short format:
+   ```
+   ./finger
+   ```
+
+2. Show detailed information about a specific user:
+   ```
+   ./finger jsmith
+   ```
+
+3. Show information about multiple users without their plan/project files:
+   ```
+   ./finger -p jsmith janedoe
+   ```
+
+4. Show short format information for a specific user:
+   ```
+   ./finger -s jsmith
+   ```
